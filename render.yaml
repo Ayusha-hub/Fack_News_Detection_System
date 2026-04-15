@@ -1,0 +1,141 @@
+services:
+  # Backend API Service
+  - type: web
+    name: sachet-backend
+    env: node
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    
+    # Environment variables (these will be set in Render dashboard)
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: FRONTEND_URL
+        value: https://sachet-frontend.onrender.com
+      - key: MONGODB_URI
+        sync: false # Set this in Render dashboard
+      - key: JWT_SECRET
+        sync: false # Set this in Render dashboard
+      - key: GOOGLE_CLIENT_ID
+        sync: false # Set this in Render dashboard
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false # Set this in Render dashboard
+      - key: MICROSOFT_CLIENT_ID
+        sync: false # Set this in Render dashboard
+      - key: MICROSOFT_CLIENT_SECRET
+        sync: false # Set this in Render dashboard
+      - key: RAZORPAY_KEY_ID
+        sync: false # Set this in Render dashboard
+      - key: RAZORPAY_KEY_SECRET
+        sync: false # Set this in Render dashboard
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false # Set this in Render dashboard
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false # Set this in Render dashboard
+      - key: SMTP_PASS
+        sync: false # Set this in Render dashboard
+      - key: TWILIO_ACCOUNT_SID
+        sync: false # Set this in Render dashboard
+      - key: TWILIO_AUTH_TOKEN
+        sync: false # Set this in Render dashboard
+      - key: TWILIO_WHATSAPP_NUMBER
+        value: whatsapp:+14155238886
+      - key: GOOGLE_FACT_CHECK_API_KEY
+        sync: false # Set this in Render dashboard
+      - key: HUGGINGFACE_API_KEY
+        sync: false # Set this in Render dashboard
+      - key: OCR_SPACE_API_KEY
+        sync: false # Set this in Render dashboard
+
+    # Build configuration
+    build:
+      nodeVersion: "18"
+      npmVersion: "9"
+
+    # Instance configuration
+    instanceType: free
+    region: oregon
+
+    # Health check
+    healthCheck:
+      path: /health
+      intervalSeconds: 30
+      timeoutSeconds: 10
+      gracePeriodSeconds: 60
+
+    # Scaling
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+
+    # Custom domains (optional)
+    # domains:
+    #   - api.sachet.app
+
+  # MongoDB Service (if using Render's managed MongoDB)
+  - type: pserv
+    name: sachet-mongodb
+    env: docker
+    plan: free
+    repo: https://github.com/render-examples/mongodb
+    envVars:
+      - key: MONGODB_USERNAME
+        generateValue: true
+      - key: MONGODB_PASSWORD
+        generateValue: true
+      - key: MONGODB_DATABASE
+        value: sachet_db
+
+# Optional: Redis for caching
+# - type: pserv
+#   name: sachet-redis
+#   env: docker
+#   plan: free
+#   repo: https://github.com/render-examples/redis
+#   envVars:
+#     - key: REDIS_PASSWORD
+#       generateValue: true
+
+# Optional: Background worker for processing
+# - type: worker
+#   name: sachet-worker
+#   env: node
+#   buildCommand: "npm install"
+#   startCommand: "npm run worker"
+#   plan: free
+#   envVars:
+#     - key: NODE_ENV
+#       value: production
+#     - key: MONGODB_URI
+#       fromService:
+#         name: sachet-mongodb
+#         property: connectionString
+#     - key: REDIS_URL
+#       fromService:
+#         name: sachet-redis
+#         property: connectionString
+
+# Optional: Cron job for maintenance tasks
+# - type: cron
+#   name: sachet-maintenance
+#   schedule: "0 2 * * *" # Daily at 2 AM
+#   env: node
+#   buildCommand: "npm install"
+#   startCommand: "npm run maintenance"
+#   plan: free
+#   envVars:
+#     - key: NODE_ENV
+#       value: production
+#     - key: MONGODB_URI
+#       fromService:
+#         name: sachet-mongodb
+#         property: connectionString

@@ -1,0 +1,148 @@
+{
+  "version": 2,
+  "name": "sachet-frontend",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/login.html",
+      "dest": "/login.html"
+    },
+    {
+      "src": "/dashboard.html",
+      "dest": "/dashboard.html"
+    },
+    {
+      "src": "/admin.html",
+      "dest": "/admin.html"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "/js/$1"
+    },
+    {
+      "src": "/css/(.*)",
+      "dest": "/css/$1"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(), microphone=(), camera=()"
+        }
+      ]
+    },
+    {
+      "source": "/js/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/css/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://sachet-backend.onrender.com/api/$1"
+    },
+    {
+      "source": "/whatsapp-webhook",
+      "destination": "https://sachet-backend.onrender.com/whatsapp-webhook"
+    },
+    {
+      "source": "/health",
+      "destination": "https://sachet-backend.onrender.com/health"
+    }
+  ],
+  "env": {
+    "API_BASE_URL": "https://sachet-backend.onrender.com",
+    "RAZORPAY_KEY_ID": "@razorpay-key-id",
+    "FRONTEND_URL": "https://sachet-frontend.vercel.app"
+  },
+  "build": {
+    "env": {
+      "API_BASE_URL": "https://sachet-backend.onrender.com"
+    }
+  },
+  "functions": {},
+  "regions": ["iad1"],
+  "framework": null,
+  "outputDirectory": null,
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "ignoreCommand": "",
+  "git": {
+    "autoDeployment": true,
+    "deployHooks": {
+      "preBuild": "",
+      "postBuild": ""
+    }
+  },
+  "crons": [],
+  "alias": [
+    "sachet-frontend.vercel.app"
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "imageOptimization": true,
+  "advAlgolia": false
+}

@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Sachet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .loading {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        .verdict-fake { border-left: 4px solid #dc2626; }
+        .verdict-real { border-left: 4px solid #16a34a; }
+        .verdict-misleading { border-left: 4px solid #f59e0b; }
+        .verdict-uncertain { border-left: 4px solid #6b7280; }
+        .confidence-high { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .confidence-medium { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .confidence-low { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <!-- Top Bar -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <div class="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center">
+                        <i class="fas fa-shield-alt text-white text-sm"></i>
+                    </div>
+                    <h1 class="ml-3 text-xl font-semibold text-gray-900">Sachet</h1>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- Language Switcher -->
+                    <div class="relative">
+                        <select id="languageSwitcher" onchange="changeLanguage(this.value)" class="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="en">English</option>
+                            <option value="hi">हिन्दी</option>
+                            <option value="mr">मराठी</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <span id="userName" class="text-sm font-medium text-gray-700" data-i18n="loading">Loading...</span>
+                        <span id="subscriptionBadge" class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                            <span data-i18n="free">Free</span>
+                        </span>
+                        <button id="upgradeBtn" onclick="showUpgradeModal()" class="px-3 py-1 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors hidden">
+                            <i class="fas fa-crown mr-1"></i>
+                            <span data-i18n="upgradeToPro">Upgrade to Pro</span>
+                        </button>
+                    </div>
+                    <button onclick="handleLogout()" class="px-3 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors">
+                        <i class="fas fa-sign-out-alt mr-1"></i>
+                        <span data-i18n="logout">Logout</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Tabs -->
+        <div class="mb-8">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8">
+                    <button onclick="switchTab('checker')" id="checkerTab" class="tab-button py-2 px-1 border-b-2 border-indigo-500 font-medium text-sm text-indigo-600">
+                        <i class="fas fa-search mr-2"></i>
+                        <span data-i18n="fakeNewsChecker">Fake News Checker</span>
+                    </button>
+                    <button onclick="switchTab('awareness')" id="awarenessTab" class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        <span data-i18n="cyberAwareness">Cyber Awareness</span>
+                    </button>
+                    <button onclick="switchTab('demo')" id="demoTab" class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        <i class="fas fa-graduation-cap mr-2"></i>
+                        <span data-i18n="studentDemo">Student Demo</span>
+                    </button>
+                    <button onclick="switchTab('history')" id="historyTab" class="tab-button py-2 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        <i class="fas fa-history mr-2"></i>
+                        <span data-i18n="history">History</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Fake News Checker Tab -->
+        <div id="checkerTabContent" class="tab-content active">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Input Section -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Analyze Content</h2>
+                    
+                    <!-- Input Type Selector -->
+                    <div class="mb-4">
+                        <div class="flex space-x-2">
+                            <button onclick="selectInputType('text')" id="textTypeBtn" class="flex-1 py-2 px-3 text-sm font-medium rounded-lg bg-indigo-600 text-white">
+                                <i class="fas fa-keyboard mr-1"></i>
+                                Text
+                            </button>
+                            <button onclick="selectInputType('url')" id="urlTypeBtn" class="flex-1 py-2 px-3 text-sm font-medium rounded-lg bg-gray-200 text-gray-700">
+                                <i class="fas fa-link mr-1"></i>
+                                URL
+                            </button>
+                            <button onclick="selectInputType('image')" id="imageTypeBtn" class="flex-1 py-2 px-3 text-sm font-medium rounded-lg bg-gray-200 text-gray-700">
+                                <i class="fas fa-image mr-1"></i>
+                                Image
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Text Input -->
+                    <div id="textInput" class="input-section">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Enter text to analyze</label>
+                        <textarea id="textInputArea" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="Paste or type the text you want to check for authenticity..."></textarea>
+                    </div>
+
+                    <!-- URL Input -->
+                    <div id="urlInput" class="input-section hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Enter URL to analyze</label>
+                        <input type="url" id="urlInputField" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="https://example.com/article">
+                    </div>
+
+                    <!-- Image Input -->
+                    <div id="imageInput" class="input-section hidden">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Upload image to analyze</label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                            <input type="file" id="imageInputField" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+                            <label for="imageInputField" class="cursor-pointer">
+                                <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                <p class="text-sm text-gray-600">Click to upload or drag and drop</p>
+                                <p class="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                            </label>
+                        </div>
+                        <div id="imagePreview" class="mt-4 hidden">
+                            <img id="previewImg" src="" alt="Preview" class="w-full h-48 object-cover rounded-lg">
+                            <button onclick="removeImage()" class="mt-2 text-sm text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash mr-1"></i>
+                                Remove image
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Analyze Button -->
+                    <button onclick="handleAnalysis()" id="analyzeBtn" class="w-full mt-6 bg-indigo-600 text-white py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors font-medium">
+                        <i class="fas fa-search mr-2"></i>
+                        Analyze Content
+                    </button>
+                </div>
+
+                <!-- Results Section -->
+                <div id="resultsSection" class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Analysis Results</h2>
+                    
+                    <!-- Loading State -->
+                    <div id="loadingState" class="hidden text-center py-12">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                        <p class="text-gray-600">Analyzing content...</p>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="errorState" class="hidden">
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-exclamation-triangle text-red-600 mr-3"></i>
+                                <div>
+                                    <h3 class="text-sm font-medium text-red-800">Analysis Failed</h3>
+                                    <p id="errorMessage" class="text-sm text-red-700 mt-1"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results -->
+                    <div id="resultsContent" class="hidden">
+                        <!-- Verdict Card -->
+                        <div id="verdictCard" class="mb-6 p-4 rounded-lg">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-semibold" id="verdictTitle">Verdict</h3>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm text-gray-600">Confidence:</span>
+                                    <span id="confidenceBadge" class="px-2 py-1 text-xs font-medium rounded-full text-white">0%</span>
+                                </div>
+                            </div>
+                            <p id="verdictDescription" class="text-gray-700 mb-3"></p>
+                            <div id="cyberAlert" class="hidden">
+                                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+                                        <span class="text-sm font-medium text-yellow-800">Cyber Alert</span>
+                                    </div>
+                                    <p id="cyberAlertText" class="text-sm text-yellow-700 mt-1"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Explanation -->
+                        <div class="mb-6">
+                            <h4 class="text-sm font-semibold text-gray-900 mb-2">Explanation</h4>
+                            <p id="explanationText" class="text-sm text-gray-700 leading-relaxed"></p>
+                        </div>
+
+                        <!-- Sources -->
+                        <div id="sourcesSection" class="mb-6 hidden">
+                            <h4 class="text-sm font-semibold text-gray-900 mb-2">Sources</h4>
+                            <ul id="sourcesList" class="space-y-2"></ul>
+                        </div>
+
+                        <!-- Processing Info -->
+                        <div class="text-xs text-gray-500 pt-4 border-t border-gray-200">
+                            <p>Processing time: <span id="processingTime">0ms</span></p>
+                            <p>Analyzed at: <span id="analysisTime"></span></p>
+                        </div>
+                    </div>
+
+                    <!-- Initial State -->
+                    <div id="initialState" class="text-center py-12">
+                        <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500">Enter content and click "Analyze" to see results</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cyber Awareness Tab -->
+        <div id="awarenessTabContent" class="tab-content">
+            <!-- Daily Tip Carousel -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4" data-i18n="dailyTip">Daily Tip</h2>
+                <div class="relative">
+                    <div id="tipCarousel" class="overflow-hidden">
+                        <div id="tipContent" class="text-gray-700">
+                            <!-- Tips will be loaded here -->
+                        </div>
+                    </div>
+                    <div class="flex justify-center mt-4 space-x-2">
+                        <button onclick="previousTip()" class="p-2 rounded-full bg-gray-100 hover:bg-gray-200">
+                            <i class="fas fa-chevron-left text-gray-600"></i>
+                        </button>
+                        <div id="tipIndicators" class="flex space-x-1">
+                            <!-- Indicators will be added here -->
+                        </div>
+                        <button onclick="nextTip()" class="p-2 rounded-full bg-gray-100 hover:bg-gray-200">
+                            <i class="fas fa-chevron-right text-gray-600"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cyber Awareness Quiz -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4" data-i18n="cyberQuiz">Cyber Awareness Quiz</h2>
+                
+                <!-- Quiz Start -->
+                <div id="quizStart">
+                    <p class="text-gray-600 mb-4" data-i18n="quizDescription">Test your knowledge about fake news and cyber security with this quick quiz!</p>
+                    <button onclick="startQuiz()" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                        <span data-i18n="startQuiz">Start Quiz</span>
+                    </button>
+                </div>
+
+                <!-- Quiz Questions -->
+                <div id="quizQuestions" class="hidden">
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-600">
+                                <span id="currentQuestion">1</span> / <span id="totalQuestions">5</span>
+                            </span>
+                            <div class="flex space-x-1">
+                                <div id="progressBar" class="flex space-x-1">
+                                    <!-- Progress indicators will be added here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="questionContainer">
+                        <!-- Questions will be loaded here -->
+                    </div>
+
+                    <div class="flex justify-between mt-6">
+                        <button onclick="previousQuestion()" id="prevBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50" disabled>
+                            <span data-i18n="previous">Previous</span>
+                        </button>
+                        <button onclick="nextQuestion()" id="nextBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                            <span data-i18n="next">Next</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quiz Results -->
+                <div id="quizResults" class="hidden">
+                    <div class="text-center">
+                        <div class="mb-4">
+                            <i class="fas fa-trophy text-4xl text-yellow-500 mb-2"></i>
+                            <h3 class="text-xl font-semibold text-gray-900" data-i18n="quizComplete">Quiz Complete!</h3>
+                        </div>
+                        <div class="mb-6">
+                            <p class="text-3xl font-bold text-indigo-600 mb-2">
+                                <span id="quizScore">0</span> / 5
+                            </p>
+                            <p class="text-gray-600" id="scoreMessage"></p>
+                        </div>
+                        <button onclick="restartQuiz()" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                            <span data-i18n="retakeQuiz">Retake Quiz</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Demo Tab -->
+        <div id="demoTabContent" class="tab-content">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 mb-4" data-i18n="sampleMessages">Sample Messages</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div onclick="analyzeSampleMessage('fake')" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-lg transition-shadow">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-times text-red-600"></i>
+                            </div>
+                            <h3 class="font-medium text-gray-900" data-i18n="fakeNews">Fake News</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-3" data-i18n="fakeExample">Breaking: Scientists discover that eating chocolate makes you fly! This revolutionary breakthrough was announced by researchers at the fictional University of Amazing Things.</p>
+                        <div class="flex items-center text-indigo-600 text-sm font-medium">
+                            <span data-i18n="clickToAnalyze">Click to Analyze</span>
+                            <i class="fas fa-arrow-right ml-1"></i>
+                        </div>
+                    </div>
+                    
+                    <div onclick="analyzeSampleMessage('real')" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-lg transition-shadow">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-check text-green-600"></i>
+                            </div>
+                            <h3 class="font-medium text-gray-900" data-i18n="realNews">Real News</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-3" data-i18n="realExample">NASA's Perseverance rover successfully collected its first sample of Martian rock, marking a significant milestone in the search for ancient life on the Red Planet.</p>
+                        <div class="flex items-center text-indigo-600 text-sm font-medium">
+                            <span data-i18n="clickToAnalyze">Click to Analyze</span>
+                            <i class="fas fa-arrow-right ml-1"></i>
+                        </div>
+                    </div>
+                    
+                    <div onclick="analyzeSampleMessage('misleading')" class="border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-lg transition-shadow">
+                        <div class="flex items-center mb-3">
+                            <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+                            </div>
+                            <h3 class="font-medium text-gray-900" data-i18n="misleading">Misleading</h3>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-3" data-i18n="misleadingExample">Study shows that drinking coffee reduces cancer risk by 100%! (Fine print: This study was conducted on 3 mice and has not been peer-reviewed.)</p>
+                        <div class="flex items-center text-indigo-600 text-sm font-medium">
+                            <span data-i18n="clickToAnalyze">Click to Analyze</span>
+                            <i class="fas fa-arrow-right ml-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="historyTabContent" class="tab-content">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900" data-i18n="analysisHistory">Analysis History</h2>
+                    <button onclick="refreshHistory()" class="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        <span data-i18n="refresh">Refresh</span>
+                    </button>
+                </div>
+                
+                <div id="historyLoading" class="text-center py-8 hidden">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                    <p class="text-gray-600" data-i18n="loadingHistory">Loading history...</p>
+                </div>
+
+                <div id="historyContent" class="hidden">
+                    <!-- History Table -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="messagePreview">Message Preview</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="verdict">Verdict</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="confidence">Confidence</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="date">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-i18n="actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- History rows will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div id="historyPagination" class="flex justify-between items-center mt-4">
+                        <div class="text-sm text-gray-700">
+                            <span data-i18n="showing">Showing</span> <span id="showingFrom">0</span>-<span id="showingTo">0</span> <span data-i18n="of">of</span> <span id="totalItems">0</span> <span data-i18n="results">results</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="loadHistoryPage('prev')" id="prevPageBtn" class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50" disabled>
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span id="currentPage" class="px-3 py-1 text-sm text-gray-700">1</span>
+                            <button onclick="loadHistoryPage('next')" id="nextPageBtn" class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50" disabled>
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="historyEmpty" class="text-center py-8">
+                    <i class="fas fa-history text-4xl text-gray-300 mb-4"></i>
+                    <p class="text-gray-500" data-i18n="noHistory">No analysis history yet</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Upgrade Modal -->
+    <div id="upgradeModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900" data-i18n="upgradeToPro">Upgrade to Pro</h2>
+                    <button onclick="closeUpgradeModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Plans -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Monthly Plan -->
+                    <div class="border border-gray-200 rounded-lg p-6 hover:border-purple-500 transition-colors cursor-pointer" onclick="selectPlan('monthly')">
+                        <div class="text-center">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2" data-i18n="monthly">Monthly</h3>
+                            <div class="text-3xl font-bold text-gray-900 mb-1">₹99<span class="text-base font-normal text-gray-600">/month</span></div>
+                            <p class="text-sm text-gray-600 mb-4" data-i18n="monthlyDesc">Billed monthly</p>
+                            
+                            <div class="text-left space-y-2 mb-4">
+                                <div class="flex items-center text-sm text-gray-700">
+                                    <i class="fas fa-check text-green-500 mr-2"></i>
+                                    <span data-i18n="feature1">Unlimited analysis</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-700">
+                                    <i class="fas fa-check text-green-500 mr-2"></i>
+                                    <span data-i18n="feature2">Priority processing</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-700">
+                                    <i class="fas fa-check text-green-500 mr-2"></i>
+                                    <span data-i18n="feature3">Advanced AI insights</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-700">
+                                    <i class="fas fa-check text-green-500 mr-2"></i>
+                                    <span data-i18n="feature4">Export results</span>
+                                </div>
+                            </div>
+                            
+                            <button class="w-full py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors plan-select-btn" data-plan="monthly">
+                                <span data-i18n="selectPlan">Select Plan</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Yearly Plan -->
+                    <div class="border border-purple-500 rounded-lg p-6 relative cursor-pointer" onclick="selectPlan('yearly')">
+                        <div class="absolute top-0 right-0 bg-purple-600 text-white text-xs px-2 py-1 rounded-bl-lg rounded-tr-lg">
+                            <span data-i18n="bestValue">Best Value</span>
+                        </div>
+                        <div class="text-center">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2" data-i18n="yearly">Yearly</h3>
+                            <div class="text-3xl font-bold text-gray-900 mb-1">₹999<span class="text-base font-normal text-gray-600">/year</span></div>
+                            <p class="text-sm text-gray-600 mb-4" data-i18n="yearlyDesc">Save 20% - 2 months free!</p>
+                            
+                            <div class="text-left space-y-2 mb-4">
+                                <div class="flex items-center text-sm text-gray-700">
+                                    <i class="fas fa-check text-green-500 mr-2"></i>
+                                    <span data-i18n="feature1">Unlimited analysis</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-700">
+                                    <i class="fas fa-check text-green-500 mr-2"></i>
+                                    <span data-i18n="feature2">Priority processing</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-700">
+                                    <i class="fas fa-check text-green-500 mr-2"></i>
+                                    <span data-i18n="feature3">Advanced AI insights</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-700">
+                                    <i class="fas fa-check text-green-500 mr-2"></i>
+                                    <span data-i18n="feature4">Export results</span>
+                                </div>
+                                <div class="flex items-center text-sm text-gray-700">
+                                    <i class="fas fa-check text-green-500 mr-2"></i>
+                                    <span data-i18n="feature5">Priority support</span>
+                                </div>
+                            </div>
+                            
+                            <button class="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors plan-select-btn" data-plan="yearly">
+                                <span data-i18n="selectPlan">Select Plan</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Section -->
+                <div id="paymentSection" class="hidden">
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4" data-i18n="completePayment">Complete Payment</h3>
+                        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-medium text-gray-900" id="selectedPlanName">Monthly Plan</p>
+                                    <p class="text-sm text-gray-600" id="selectedPlanPrice">₹99/month</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-600" data-i18n="total">Total:</p>
+                                    <p class="text-xl font-bold text-gray-900" id="totalAmount">₹99</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button id="payBtn" onclick="processPayment()" class="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                            <i class="fas fa-lock mr-2"></i>
+                            <span data-i18n="payNow">Pay Now</span>
+                        </button>
+                        
+                        <div class="mt-4 text-center">
+                            <button onclick="backToPlans()" class="text-purple-600 hover:text-purple-800 text-sm">
+                                <i class="fas fa-arrow-left mr-1"></i>
+                                <span data-i18n="backToPlans">Back to Plans</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Note -->
+                <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+                    <div class="flex items-start">
+                        <i class="fas fa-shield-alt text-blue-600 mt-1 mr-3"></i>
+                        <div>
+                            <p class="text-sm font-medium text-blue-900" data-i18n="securePayment">Secure Payment</p>
+                            <p class="text-sm text-blue-700" data-i18n="paymentSecurity">Your payment information is encrypted and secure. We use Razorpay for safe transactions.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Translations object
+        const translations = {
+            en: {
+                loading: "Loading...",
+                free: "Free",
+                logout: "Logout",
+                fakeNewsChecker: "Fake News Checker",
+                cyberAwareness: "Cyber Awareness",
+                studentDemo: "Student Demo",
+                history: "History",
+                dailyTip: "Daily Tip",
+                cyberQuiz: "Cyber Awareness Quiz",
+                quizDescription: "Test your knowledge about fake news and cyber security with this quick quiz!",
+                startQuiz: "Start Quiz",
+                previous: "Previous",
+                next: "Next",
+                quizComplete: "Quiz Complete!",
+                retakeQuiz: "Retake Quiz",
+                sampleMessages: "Sample Messages",
+                fakeNews: "Fake News",
+                realNews: "Real News",
+                misleading: "Misleading",
+                fakeExample: "Breaking: Scientists discover that eating chocolate makes you fly! This revolutionary breakthrough was announced by researchers at the fictional University of Amazing Things.",
+                realExample: "NASA's Perseverance rover successfully collected its first sample of Martian rock, marking a significant milestone in the search for ancient life on the Red Planet.",
+                misleadingExample: "Study shows that drinking coffee reduces cancer risk by 100%! (Fine print: This study was conducted on 3 mice and has not been peer-reviewed.)",
+                clickToAnalyze: "Click to Analyze",
+                analysisHistory: "Analysis History",
+                refresh: "Refresh",
+                loadingHistory: "Loading history...",
+                messagePreview: "Message Preview",
+                verdict: "Verdict",
+                confidence: "Confidence",
+                date: "Date",
+                actions: "Actions",
+                showing: "Showing",
+                of: "of",
+                results: "results",
+                noHistory: "No analysis history yet",
+                upgradeToPro: "Upgrade to Pro",
+                monthly: "Monthly",
+                yearly: "Yearly",
+                monthlyDesc: "Billed monthly",
+                yearlyDesc: "Save 20% - 2 months free!",
+                bestValue: "Best Value",
+                selectPlan: "Select Plan",
+                feature1: "Unlimited analysis",
+                feature2: "Priority processing",
+                feature3: "Advanced AI insights",
+                feature4: "Export results",
+                feature5: "Priority support",
+                completePayment: "Complete Payment",
+                total: "Total:",
+                payNow: "Pay Now",
+                backToPlans: "Back to Plans",
+                securePayment: "Secure Payment",
+                paymentSecurity: "Your payment information is encrypted and secure. We use Razorpay for safe transactions."
+            },
+            hi: {
+                loading: "लोड हो रहा है...",
+                free: "मुफ्त",
+                logout: "लॉगआउट",
+                fakeNewsChecker: "फेक न्यूज चेकर",
+                cyberAwareness: "साइबर जागरूकता",
+                studentDemo: "छात्र डेमो",
+                history: "इतिहास",
+                dailyTip: "दैनिक टिप",
+                cyberQuiz: "साइबर जागरूकता क्विज",
+                quizDescription: "फेक न्यूज और साइबर सुरक्षा के बारे में अपने ज्ञान का परीक्षण करें!",
+                startQuiz: "क्विज शुरू करें",
+                previous: "पिछला",
+                next: "अगला",
+                quizComplete: "क्विज पूर्ण!",
+                retakeQuiz: "क्विज फिर से लें",
+                sampleMessages: "नमूना संदेश",
+                fakeNews: "फेक न्यूज",
+                realNews: "असली खबर",
+                misleading: "भ्रामक",
+                fakeExample: "ब्रेकिंग: वैज्ञानिकों ने खोजा कि चॉकलेट खाने से उड़ सकते हैं! यह क्रांतिकारी खोज काल्पनिक अद्भुत विश्वविद्यालय के शोधकर्ताओं ने की है।",
+                realExample: "नासा का पर्सिवरेंस रोवर ने मंगल ग्रह की चट्टान का पहला नमूना सफलतापूर्वक एकत्र किया, जो प्राचीन जीवन की खोज में एक महत्वपूर्ण मील का पत्थर है।",
+                misleadingExample: "अध्ययन से पता चला कि कॉफी पीने से कैंसर का जोखिम 100% कम हो जाता है! (छोटे अक्षरों में: यह अध्ययन 3 चूहों पर किया गया था और इसकी समीक्षा नहीं की गई है।)",
+                clickToAnalyze: "विश्लेषण के लिए क्लिक करें",
+                analysisHistory: "विश्लेषण इतिहास",
+                refresh: "रिफ्रेश",
+                loadingHistory: "इतिहास लोड हो रहा है...",
+                messagePreview: "संदेश पूर्वावलोकन",
+                verdict: "निर्णय",
+                confidence: "आत्मविश्वास",
+                date: "तारीख",
+                actions: "कार्रवाई",
+                showing: "दिखा रहे हैं",
+                of: "का",
+                results: "परिणाम",
+                noHistory: "अभी तक कोई विश्लेषण इतिहास नहीं",
+                upgradeToPro: "प्रो में अपग्रेड करें",
+                monthly: "मासिक",
+                yearly: "वार्षिक",
+                monthlyDesc: "मासिक बिल",
+                yearlyDesc: "20% बचाएं - 2 महीने मुफ्त!",
+                bestValue: "सबसे अच्छा मूल्य",
+                selectPlan: "योजना चुनें",
+                feature1: "असीमित विश्लेषण",
+                feature2: "प्राथमिकता प्रसंस्करण",
+                feature3: "उन्नत AI अंतर्दृष्टि",
+                feature4: "परिणाम निर्यात करें",
+                feature5: "प्राथमिकता समर्थन",
+                completePayment: "भुगतान पूर्ण करें",
+                total: "कुल:",
+                payNow: "अभी भुगतान करें",
+                backToPlans: "योजनाओं पर वापस जाएं",
+                securePayment: "सुरक्षित भुगतान",
+                paymentSecurity: "आपकी भुगतान जानकारी एन्क्रिप्टेड और सुरक्षित है। हम सुरक्षित लेनदेन के लिए Razorpay का उपयोग करते हैं।"
+            },
+            mr: {
+                loading: "लोड होत आहे...",
+                free: "फ्री",
+                logout: "लॉगआउट",
+                fakeNewsChecker: "फेक न्यूज चेकर",
+                cyberAwareness: "सायबर जागरूकता",
+                studentDemo: "विद्यार्थी डेमो",
+                history: "इतिहास",
+                dailyTip: "दैनिक टिप",
+                cyberQuiz: "सायबर जागरूकता क्विझ",
+                quizDescription: "फेक न्यूज आणि सायबर सुरक्षा बद्दल आपले ज्ञान तपासा!",
+                startQuiz: "क्विझ सुरू करा",
+                previous: "मागील",
+                next: "पुढील",
+                quizComplete: "क्विझ पूर्ण!",
+                retakeQuiz: "क्विझ पुन्हा घ्या",
+                sampleMessages: "नमुना संदेश",
+                fakeNews: "फेक न्यूज",
+                realNews: "खरी बात",
+                misleading: "फसवणूक",
+                fakeExample: "ब्रेकिंग: शास्त्रज्ञांनी शोधले की चॉकलेट खाल्ल्याने उड्डाण करता येता! ही क्रांतिकारी शोध काल्पनिक अद्भुत विद्यापीठाच्या संशोधकांनी केली आहे.",
+                realExample: "नासाचे पर्सिव्हरन्स रोव्हरने मंगळ ग्रहाच्या खडकाचे पहिले नमुना यशस्वीरित्या गोळा केले, जे प्राचीन जीवनाच्या शोधात एक महत्त्वपूर्ण टप्पा आहे.",
+                misleadingExample: "अभ्यासातून समोरे आले की कॉफी प्यायल्याने कर्करोगाचा धोका १००% कमी होतो! (लहान अक्षरांमध्ये: हा अभ्यास 3 उंदरांवर केला गेला आणि त्याची समीक्षा झालेली नाही.)",
+                clickToAnalyze: "विश्लेषणासाठी क्लिक करा",
+                analysisHistory: "विश्लेषण इतिहास",
+                refresh: "रिफ्रेश",
+                loadingHistory: "इतिहास लोड होत आहे...",
+                messagePreview: "संदेश पूर्वालोकन",
+                verdict: "निर्णय",
+                confidence: "आत्मविश्वास",
+                date: "तारीख",
+                actions: "क्रिया",
+                showing: "दाखवत आहे",
+                of: "चा",
+                results: "परिणाम",
+                noHistory: "अजूनही कोणतेही विश्लेषण इतिहास नाही",
+                upgradeToPro: "प्रो मध्ये अपग्रेड करा",
+                monthly: "मासिक",
+                yearly: "वार्षिक",
+                monthlyDesc: "मासिक बिलिंग",
+                yearlyDesc: "२०% वाचवा - २ महिने फ्री!",
+                bestValue: "सर्वोत्तम मूल्य",
+                selectPlan: "योजना निवडा",
+                feature1: "असीमित विश्लेषण",
+                feature2: "प्राधान्य प्रक्रिया",
+                feature3: "प्रगत AI अंतर्दृष्टी",
+                feature4: "परिणाम निर्यात करा",
+                feature5: "प्राधान्य समर्थन",
+                completePayment: "भुगतान पूर्ण करा",
+                total: "एकूण:",
+                payNow: "आता भुगतान करा",
+                backToPlans: "योजनांवर परत जा",
+                securePayment: "सुरक्षित भुगतान",
+                paymentSecurity: "आपले भुगतान माहिती एन्क्रिप्टेड आणि सुरक्षित आहे. आपण सुरक्षित व्यवहारांसाठी Razorpay वापरतो."
+            }
+        };
+
+        // Current language
+        let currentLanguage = 'en';
+
+        // Change language function
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            updateTranslations();
+            localStorage.setItem('sachet_language', lang);
+        }
+
+        // Update all translations
+        function updateTranslations() {
+            const elements = document.querySelectorAll('[data-i18n]');
+            elements.forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[currentLanguage][key]) {
+                    element.textContent = translations[currentLanguage][key];
+                }
+            });
+        }
+
+        // Initialize language from localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedLanguage = localStorage.getItem('sachet_language') || 'en';
+            currentLanguage = savedLanguage;
+            document.getElementById('languageSwitcher').value = savedLanguage;
+            updateTranslations();
+        });
+    </script>
+    </script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
