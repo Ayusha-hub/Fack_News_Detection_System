@@ -72,6 +72,14 @@ router.post('/create-order', authenticateToken, async (req, res) => {
       });
     }
 
+    // Check if Razorpay is configured
+    if (!razorpay) {
+      return res.status(503).json({ 
+        error: 'Payment service is not configured. Please contact administrator.',
+        code: 'PAYMENT_NOT_CONFIGURED'
+      });
+    }
+
     // Check if user already has active subscription
     const activeSubscription = await Subscription.findActiveByUserId(req.userId);
     if (activeSubscription) {
@@ -138,16 +146,31 @@ router.post('/create-order', authenticateToken, async (req, res) => {
 // POST /verify-payment - Verify Razorpay payment
 router.post('/verify-payment', authenticateToken, async (req, res) => {
   try {
-    const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
-
-    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
-      return res.status(400).json({ error: 'Missing payment verification details' });
+    // Check if Razorpay is configured
+    if (!razorpay) {
+      return res.status(503).json({ 
+        error: 'Payment service is not configured. Please contact administrator.',
+        code: 'PAYMENT_NOT_CONFIGURED'
+      });
     }
+
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ error: 'Payment verification details required' });
+    }
+
+    // Verify signature
+    const body = razorpay_order_id + '|' + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest('hex');
 
     // Find subscription record
     const subscription = await Subscription.findOne({
       userId: req.userId,
-      razorpayOrderId: razorpayOrderId,
+      razorpayOrderId: razorpay_order_id,
       status: 'created'
     });
 
@@ -205,18 +228,21 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /razorpay-webhook - Razorpay webhook for auto-renewal
+// POST /razorpay-webhook - Handle Razorpay webhooks
 router.post('/razorpay-webhook', async (req, res) => {
   try {
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    const signature = req.headers['x-razorpay-signature'];
-    
-    if (!signature) {
-      return res.status(400).json({ error: 'Webhook signature missing' });
+    // Check if Razorpay is configured
+    if (!razorpay) {
+      console.log('Razorpay webhook received but Razorpay not configured');
+      return res.status(200).send('Webhook received');
     }
 
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    
     // Verify webhook signature
+    const signature = req.headers['x-razorpay-signature'];
     const body = JSON.stringify(req.body);
+    
     const expectedSignature = crypto
       .createHmac('sha256', webhookSecret)
       .update(body)
